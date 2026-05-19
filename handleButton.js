@@ -125,6 +125,10 @@ module.exports = async function handleButton(interaction) {
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
+          .setCustomId('ticket_claim')
+          .setLabel('✋ Devral')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
           .setCustomId('ticket_close')
           .setLabel('🔒 Ticket Kapat')
           .setStyle(ButtonStyle.Danger)
@@ -147,6 +151,43 @@ module.exports = async function handleButton(interaction) {
         ephemeral: true
       });
     }
+  }
+
+  // ─── TICKET DEVRAL ───
+  if (customId === 'ticket_claim') {
+    const staffRoleId = process.env.STAFF_ROLE_ID;
+    
+    // Yetki kontrolü: Sadece yetkili olanlar devralabilir (Staff rolü veya ManageMessages izni)
+    const isStaff = member.permissions.has(PermissionFlagsBits.ManageMessages) || 
+                    (staffRoleId && member.roles.cache.has(staffRoleId));
+
+    if (!isStaff) {
+      return interaction.reply({
+        content: '❌ Bu işlemi yalnızca yetkililer yapabilir.',
+        ephemeral: true
+      });
+    }
+
+    const embed = new EmbedBuilder()
+      .setColor(0xF1C40F)
+      .setDescription(`✋ **Bu bilet <@${member.id}> yetkilisi tarafından devralındı!**\nLütfen yetkilinin size dönüş yapmasını bekleyin.`);
+
+    // Butonu devre dışı bırak veya "Devralındı" olarak güncelle
+    const disabledRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('ticket_claim_disabled')
+        .setLabel(`✋ Devralan: ${member.displayName}`)
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(true),
+      new ButtonBuilder()
+        .setCustomId('ticket_close')
+        .setLabel('🔒 Ticket Kapat')
+        .setStyle(ButtonStyle.Danger)
+    );
+
+    // Orijinal mesajı güncelle
+    await interaction.update({ components: [disabledRow] });
+    return interaction.followUp({ embeds: [embed] });
   }
 
   // ─── TICKET KAPAT ───
