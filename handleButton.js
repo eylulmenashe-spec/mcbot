@@ -10,6 +10,51 @@ const {
 module.exports = async function handleButton(interaction) {
   const { customId, guild, member } = interaction;
 
+  // ─── IC İSİM KABUL ET / REDDET ───
+  if (customId.startsWith('ic_isim_approve_')) {
+    const parts = customId.split('_');
+    const targetUserId = parts[3];
+    const targetName = parts.slice(4).join('_');
+    
+    // Yetki kontrolü
+    if (!member.permissions.has(PermissionFlagsBits.ManageNicknames)) {
+      return interaction.reply({ content: '❌ Bu işlemi yapmak için yetkiniz yok.', ephemeral: true });
+    }
+
+    try {
+      const targetMember = await guild.members.fetch(targetUserId);
+      if (targetMember) {
+        await targetMember.setNickname(targetName);
+        await targetMember.send(`✅ **IC İsim Talebiniz Onaylandı!** Yeni isminiz: \`${targetName}\``).catch(() => {});
+        await interaction.update({ content: `✅ <@${targetUserId}> adlı kullanıcının ismi **${targetName}** olarak ayarlandı. (Onaylayan: <@${member.id}>)`, embeds: [], components: [] });
+      }
+    } catch (e) {
+      console.error(e);
+      return interaction.reply({ content: '❌ İsim değiştirilirken bir hata oluştu. (Rolüm bu kullanıcının üstünde olmayabilir)', ephemeral: true });
+    }
+    return;
+  }
+
+  if (customId.startsWith('ic_isim_reject_')) {
+    const parts = customId.split('_');
+    const targetUserId = parts[3];
+    
+    if (!member.permissions.has(PermissionFlagsBits.ManageNicknames)) {
+      return interaction.reply({ content: '❌ Bu işlemi yapmak için yetkiniz yok.', ephemeral: true });
+    }
+
+    try {
+      const targetMember = await guild.members.fetch(targetUserId);
+      if (targetMember) {
+        await targetMember.send(`❌ **IC İsim Talebiniz Reddedildi!** Lütfen kurallara uygun geçerli bir isim belirleyip tekrar talep gönderin.`).catch(() => {});
+      }
+      await interaction.update({ content: `❌ <@${targetUserId}> kullanıcısının IC İsim talebi reddedildi. (Reddeden: <@${member.id}>)`, embeds: [], components: [] });
+    } catch (e) {
+      console.error(e);
+    }
+    return;
+  }
+
   // ─── TICKET OLUŞTUR ───
   if (customId === 'ticket_create') {
     // Aynı kişinin açık ticketı var mı kontrol et
