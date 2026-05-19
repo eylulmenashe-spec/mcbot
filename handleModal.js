@@ -6,6 +6,54 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 module.exports = async function handleModal(interaction) {
   const { customId, member, guild } = interaction;
 
+  // ─── KASA MODAL İŞLEYİCİSİ ───
+  if (customId === 'modal_kasa_gelir' || customId === 'modal_kasa_gider') {
+    const isGelir = customId === 'modal_kasa_gelir';
+    const miktarInput = interaction.fields.getTextInputValue('miktar');
+    const sebep = interaction.fields.getTextInputValue('sebep');
+    const miktar = parseInt(miktarInput.replace(/[^0-9]/g, ''));
+
+    if (isNaN(miktar) || miktar <= 0) {
+      return interaction.reply({ content: '❌ Geçersiz bir miktar girdiniz.', ephemeral: true });
+    }
+
+    const fs = require('fs');
+    let bakiye = 0;
+    try {
+      if (fs.existsSync('kasa.json')) {
+        bakiye = JSON.parse(fs.readFileSync('kasa.json')).bakiye;
+      }
+    } catch (e) {}
+
+    if (!isGelir && bakiye < miktar) {
+      return interaction.reply({ content: `❌ Kasada yeterli para yok! Mevcut Bakiye: \`$${bakiye.toLocaleString()}\``, ephemeral: true });
+    }
+
+    bakiye = isGelir ? bakiye + miktar : bakiye - miktar;
+    fs.writeFileSync('kasa.json', JSON.stringify({ bakiye }));
+
+    const embed = new EmbedBuilder()
+      .setColor(isGelir ? 0x2ECC71 : 0xE74C3C)
+      .setTitle(isGelir ? '📥 Kasaya Para Eklendi' : '📤 Kasadan Para Çekildi')
+      .addFields(
+        { name: 'İşlemi Yapan', value: `<@${member.id}>`, inline: true },
+        { name: 'Miktar', value: `\`$${miktar.toLocaleString()}\``, inline: true },
+        { name: 'Güncel Bakiye', value: `\`$${bakiye.toLocaleString()}\``, inline: false },
+        { name: 'Açıklama / Sebep', value: sebep, inline: false }
+      )
+      .setTimestamp();
+
+    await interaction.reply({ embeds: [embed] });
+    
+    // Varsa log kanalına da gönder
+    const logChannelId = process.env.LOG_CHANNEL_ID;
+    if (logChannelId) {
+      const logChannel = guild.channels.cache.get(logChannelId);
+      if (logChannel) logChannel.send({ embeds: [embed] });
+    }
+    return;
+  }
+
   // ─── MAZERET FORMU SUBMIT ───
   if (customId === 'mazeret_submit') {
     const isim = interaction.fields.getTextInputValue('mazeret_isim');

@@ -55,6 +55,41 @@ module.exports = async function handleButton(interaction) {
     return;
   }
 
+  // ─── KASA YÖNETİMİ ───
+  if (customId === 'kasa_bakiye_sor') {
+    if (!member.permissions.has(PermissionFlagsBits.ManageMessages)) {
+      return interaction.reply({ content: '❌ Yetkiniz yok.', ephemeral: true });
+    }
+    const fs = require('fs');
+    let bakiye = 0;
+    try {
+      if (fs.existsSync('kasa.json')) {
+        bakiye = JSON.parse(fs.readFileSync('kasa.json')).bakiye;
+      }
+    } catch (e) {}
+    return interaction.reply({ content: `💰 **Kulüp Kasası Güncel Bakiye:** \`$${bakiye.toLocaleString()}\``, ephemeral: true });
+  }
+
+  if (customId === 'kasa_gelir_ekle') {
+    if (!member.permissions.has(PermissionFlagsBits.ManageMessages)) return interaction.reply({ content: '❌ Yetkiniz yok.', ephemeral: true });
+    const modal = new ModalBuilder().setCustomId('modal_kasa_gelir').setTitle('📥 Kasaya Para Ekle');
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('miktar').setLabel('Miktar ($)').setStyle(TextInputStyle.Short).setRequired(true)),
+      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('sebep').setLabel('Sebep / Açıklama').setStyle(TextInputStyle.Paragraph).setRequired(true))
+    );
+    return interaction.showModal(modal);
+  }
+
+  if (customId === 'kasa_gider_cek') {
+    if (!member.permissions.has(PermissionFlagsBits.ManageMessages)) return interaction.reply({ content: '❌ Yetkiniz yok.', ephemeral: true });
+    const modal = new ModalBuilder().setCustomId('modal_kasa_gider').setTitle('📤 Kasadan Para Çek');
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('miktar').setLabel('Miktar ($)').setStyle(TextInputStyle.Short).setRequired(true)),
+      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('sebep').setLabel('Sebep / Açıklama').setStyle(TextInputStyle.Paragraph).setRequired(true))
+    );
+    return interaction.showModal(modal);
+  }
+
   // ─── TICKET OLUŞTUR ───
   if (customId === 'ticket_create') {
     // Aynı kişinin açık ticketı var mı kontrol et
